@@ -1,0 +1,14 @@
+{
+  "name": "ed-ai-impacts",
+  "version": "2.0.0",
+  "description": "Empreinte IA Énergies Demain : estimation de l’électricité, du carbone, de l’eau et de la matière mobilisés par l’usage de Claude, comparée au reste des impacts de l’entreprise.",
+  "private": true,
+  "homepage": "https://romainbdr.github.io/ed-ai-impacts/",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node tests/check.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
