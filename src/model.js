@@ -175,14 +175,14 @@ var EFFORTS = [
 var DEFAULT_PERDAY_SPARSE = {
   conseil: [
     { q_simple: 4, chat_multi: 0.5, write_short: 1, pdf_read: 0.2 },
-    { q_simple: 8, chat_multi: 2, write_short: 2, pdf_read: 0.6, corpus: 0.05, deep_research: 0.3, docx: 0.1, pptx: 0.05, doc_rev: 0.3 },
-    { q_simple: 15, chat_multi: 4, write_short: 4, pdf_read: 1.5, corpus: 0.2, deep_research: 0.8, docx: 0.3, pptx: 0.2, doc_rev: 1 },
-    { q_simple: 25, chat_multi: 6, write_short: 6, pdf_read: 3, corpus: 0.4, deep_research: 1.5, docx: 0.6, pptx: 0.4, doc_rev: 2, data_analysis: 0.3 }
+    { q_simple: 8, chat_multi: 2, write_short: 2, pdf_read: 0.6, corpus: 0.05, deep_research: 0.3, docx: 0.1, pptx: 0.05, doc_rev: 0.3, xlsx_model: 0.1 },
+    { q_simple: 15, chat_multi: 4, write_short: 4, pdf_read: 1.5, corpus: 0.2, deep_research: 0.8, docx: 0.3, pptx: 0.2, doc_rev: 1, xlsx_model: 0.2 },
+    { q_simple: 25, chat_multi: 6, write_short: 6, pdf_read: 3, corpus: 0.4, deep_research: 1.5, docx: 0.6, pptx: 0.4, doc_rev: 2, data_analysis: 0.3, xlsx_model: 0.3 }
   ],
   modelisation: [
     { q_simple: 4, chat_multi: 1, data_analysis: 0.1, small_tool: 0.1 },
     { q_simple: 8, chat_multi: 2, pdf_read: 0.2, data_analysis: 0.5, model_build: 0.2, small_tool: 0.3 },
-    { q_simple: 12, chat_multi: 3, pdf_read: 0.5, deep_research: 0.2, data_analysis: 1, model_build: 0.5, small_tool: 0.6, feature_light: 0.2 },
+    { q_simple: 12, chat_multi: 3, pdf_read: 0.5, deep_research: 0.2, data_analysis: 1, model_build: 0.5, small_tool: 0.6, feature_light: 0.2, feature_heavy: 0.1 },
     { q_simple: 15, chat_multi: 4, pdf_read: 0.5, deep_research: 0.3, data_analysis: 1.5, model_build: 1, small_tool: 1, feature_light: 0.5, feature_heavy: 0.3 }
   ],
   dev: [

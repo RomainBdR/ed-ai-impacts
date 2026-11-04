@@ -22,10 +22,10 @@ const median = (i) => M.totalStats(mc, i).p50;
 
 /* ---------- scénario par défaut ---------- */
 check("scénario par défaut : valeurs médianes de référence (document du projet)", () => {
-  near(median(0), 1.4e3 * 1000, 0.08, "électricité (Wh)");
-  near(median(1), 540e3, 0.08, "carbone (g)");
-  near(median(2), 5.9e6, 0.08, "eau (mL)");
-  near(median(3), 120e3, 0.08, "matière (mg Sb éq.)");
+  near(median(0), 1.5e6, 0.08, "électricité (Wh)");
+  near(median(1), 580e3, 0.08, "carbone (g)");
+  near(median(2), 6.4e6, 0.08, "eau (mL)");
+  near(median(3), 130e3, 0.08, "matière (mg Sb éq.)");
 });
 
 check("les quantiles sont ordonnés (P5 < P50 < P95) pour les quatre indicateurs", () => {
@@ -61,7 +61,7 @@ check("un réseau électrique bas carbone réduit le carbone sans changer l’é
   assert.ok(M.totalStats(mc2, 2).p50 < median(2), "l’eau liée à l’électricité doit baisser avec un réseau moins consommateur d’eau");
 });
 
-check("les tâches ajoutées après la version 3 ont un coût propre et n’altèrent pas le scénario par défaut", () => {
+check("les tâches ajoutées après la version 3 ont un coût propre et accroissent le total lorsqu’on les ajoute", () => {
   ["xlsx_model", "ux_design"].forEach((id) => {
     const t = M.taskIndex(id);
     assert.ok(t >= 0, id + " absente");
@@ -69,6 +69,21 @@ check("les tâches ajoutées après la version 3 ont un coût propre et n’alt�
     const S2 = M.defaultState(); S2.perDay[0][1][t] = 1;
     assert.ok(M.totalStats(M.runMC(S2, { N: 500 }), 0).p50 > M.totalStats(M.runMC(M.defaultState(), { N: 500 }), 0).p50, id + " : la tâche ajoutée doit accroître le total");
   });
+});
+
+check("journées types : tableur complexe réservé au conseil et études, maquettes UX/UI laissées à zéro, mode code lourd en modélisation forte et très forte", () => {
+  const x = M.taskIndex("xlsx_model"), u = M.taskIndex("ux_design"), h = M.taskIndex("feature_heavy");
+  const D = M.defaultState().perDay;
+  D.forEach((persona, p) => persona.forEach((day, k) => {
+    assert.equal(day[u], 0, "ux_design doit rester à 0 (profil " + p + ", intensité " + k + ")");
+  }));
+  const used = D.map((persona) => persona.map((day) => day[x]));
+  const personasWith = used.map((a, p) => (a.some((v) => v > 0) ? p : -1)).filter((p) => p >= 0);
+  assert.equal(personasWith.length, 1, "un seul profil doit utiliser le tableur complexe : " + personasWith.join(","));
+  let modPersona = -1;
+  D.forEach((persona, p) => { if (persona.some((day) => day[h] > 0)) modPersona = modPersona < 0 ? p : modPersona; });
+  assert.ok(modPersona >= 0 && modPersona !== personasWith[0], "le mode code lourd doit concerner un autre profil que le conseil");
+  assert.ok(D[modPersona][2][h] > 0 && D[modPersona][3][h] > 0, "mode code lourd présent en intensité forte et très forte");
 });
 
 /* ---------- reste de l’entreprise et comparaison ---------- */
@@ -84,8 +99,8 @@ check("la comparaison porte sur quatre indicateurs, avec des parts comprises ent
 
 check("part de l’IA du scénario par défaut (document du projet)", () => {
   const p = Object.fromEntries(rows.map((r) => [r.id, r.share.p50]));
-  near(p.elec, 0.031, 0.15, "électricité"); near(p.energy, 0.024, 0.15, "énergie finale");
-  near(p.co2, 0.0071, 0.15, "carbone"); near(p.water, 0.124, 0.15, "eau");
+  near(p.elec, 0.032, 0.15, "électricité"); near(p.energy, 0.025, 0.15, "énergie finale");
+  near(p.co2, 0.0080, 0.15, "carbone"); near(p.water, 0.12, 0.15, "eau");
 });
 
 check("la part de l’IA croît avec le multiplicateur d’usage et le multiplicateur inverse est cohérent", () => {
