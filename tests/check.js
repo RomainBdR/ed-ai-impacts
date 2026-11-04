@@ -61,6 +61,16 @@ check("un réseau électrique bas carbone réduit le carbone sans changer l’é
   assert.ok(M.totalStats(mc2, 2).p50 < median(2), "l’eau liée à l’électricité doit baisser avec un réseau moins consommateur d’eau");
 });
 
+check("les tâches ajoutées après la version 3 ont un coût propre et n’altèrent pas le scénario par défaut", () => {
+  ["xlsx_model", "ux_design"].forEach((id) => {
+    const t = M.taskIndex(id);
+    assert.ok(t >= 0, id + " absente");
+    assert.ok(M.unitStats(mc, t, 0).p50 > 100 && M.unitStats(mc, t, 0).p5 < M.unitStats(mc, t, 0).p95, id);
+    const S2 = M.defaultState(); S2.perDay[0][1][t] = 1;
+    assert.ok(M.totalStats(M.runMC(S2, { N: 500 }), 0).p50 > M.totalStats(M.runMC(M.defaultState(), { N: 500 }), 0).p50, id + " : la tâche ajoutée doit accroître le total");
+  });
+});
+
 /* ---------- reste de l’entreprise et comparaison ---------- */
 const mcb = M.runBase(S, { N: 2500 });
 const rows = M.compare(mc, mcb);

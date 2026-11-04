@@ -663,7 +663,9 @@ var CATS = [
 
 /* Budgets de jetons par tâche.
    nin = jetons d’entrée frais (entrée + écriture du cache), ncache = jetons relus dans le cache,
-   nout = jetons de sortie y compris raisonnement, ctx = longueur moyenne du contexte. */
+   nout = jetons de sortie y compris raisonnement, ctx = longueur moyenne du contexte.
+   late = tâche ajoutée après la version 3 : son facteur de taille est tiré dans un flux aléatoire distinct, de sorte que
+   l’ajout d’une tâche ne modifie pas les tirages des autres et laisse inchangés les résultats d’un scénario qui ne l’utilise pas. */
 var TASKS = [
   { id: "q_simple",      cat: "echanges",   label: "Question simple",                         desc: "Question ponctuelle, réponse courte, raisonnement léger.",
     nin: 300,     ncache: 0,        nout: 900,    ctx: 500,    vol: [0.5, 2.5] },
@@ -685,10 +687,14 @@ var TASKS = [
     nin: 80000,   ncache: 300000,   nout: 25000,  ctx: 50000,  vol: [0.5, 2.2] },
   { id: "data_analysis", cat: "donnees",    label: "Analyse de données",                      desc: "Fichier tabulaire, traitements, graphiques et commentaires.",
     nin: 40000,   ncache: 300000,   nout: 15000,  ctx: 40000,  vol: [0.5, 2.5] },
-  { id: "model_build",   cat: "donnees",    label: "Construction d’un modèle",                desc: "Modèle Python ou Excel construit ou modifié au cours d’une séance de travail.",
+  { id: "model_build",   cat: "donnees",    label: "Construction d’un modèle",                desc: "Modèle Python, ou petit modèle sous Excel, construit ou modifié au cours d’une séance de travail.",
     nin: 100000,  ncache: 1500000,  nout: 40000,  ctx: 60000,  vol: [0.5, 2.5] },
+  { id: "xlsx_model",    cat: "donnees",    label: "Tableur Excel complexe et réutilisable",  desc: "Classeur à plusieurs onglets, avec formules liées, contrôles de cohérence et mode d’emploi, recalculé et vérifié.",
+    nin: 120000,  ncache: 1200000,  nout: 60000,  ctx: 60000,  vol: [0.5, 2.5], late: true },
   { id: "small_tool",    cat: "code",       label: "Petit outil ou script",                   desc: "Script, page web ou macro, quelques itérations (environ une heure).",
     nin: 40000,   ncache: 300000,   nout: 15000,  ctx: 40000,  vol: [0.4, 2.5] },
+  { id: "ux_design",     cat: "code",       label: "Maquettes d’interface et parcours utilisateurs (UX/UI)", desc: "Plusieurs écrans ou un parcours complet, en maquettes interactives itérées avec des captures d’écran de contrôle.",
+    nin: 150000,  ncache: 1200000,  nout: 60000,  ctx: 50000,  vol: [0.4, 2.5], late: true },
   { id: "feature_light", cat: "code",       label: "Fonctionnalité légère (mode code)",       desc: "Évolution ciblée d’un outil métier, une à deux heures de travail.",
     nin: 150000,  ncache: 2500000,  nout: 25000,  ctx: 60000,  vol: [0.4, 2.5] },
   { id: "feature_heavy", cat: "code",       label: "Fonctionnalité lourde (mode code)",       desc: "Chantier d’une journée dans un outil métier, nombreux fichiers modifiés.",
@@ -1041,6 +1047,8 @@ function runMC(scn, opts) {
   var fixed = scn.fixed || {}, volUnc = scn.volUnc !== false, taskVolSampled = volUnc && !fixed.vol_tok;
   var NPAR = PARAMS.length;
   var zs = new Float64Array(NPAR), zt = new Float64Array(T), volT = new Float64Array(T), P = {};
+  var rngLate = mulberry32(seed + 7919), tMain = [], tLate = [];
+  for (var ti = 0; ti < T; ti++) (TASKS[ti].late ? tLate : tMain).push(ti);
   var mc = {
     N: N, scn: scn, prep: prep,
     Etot: new Float64Array(N), Ep: new Float64Array(N * NP), Ecell: new Float64Array(N * NC), Et: new Float64Array(N * T),
@@ -1051,7 +1059,8 @@ function runMC(scn, opts) {
   var k, j, t, q, f, v;
   for (k = 0; k < N; k++) {
     for (j = 0; j < NPAR; j++) zs[j] = gauss(rng);
-    for (t = 0; t < T; t++) zt[t] = gauss(rng);
+    for (j = 0; j < tMain.length; j++) zt[tMain[j]] = gauss(rng);
+    for (j = 0; j < tLate.length; j++) zt[tLate[j]] = gauss(rngLate);
     for (j = 0; j < NPAR; j++) {
       q = PARAMS[j]; f = fixed[q.id];
       if (f) v = q[f];
