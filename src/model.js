@@ -354,6 +354,7 @@ function sanitizeState(src) {
     d.base.staff = Math.round(num(src.base.staff, d.base.staff, 1, 100000));
     d.base.area = num(src.base.area, d.base.area, 0, 1e7);
     d.base.homeShare = num(src.base.homeShare, d.base.homeShare, 0, 1);
+    d.base.svcKEur = num(src.base.svcKEur, d.base.svcKEur, 0, 1e7);
     d.base.elecKWh = numOrNull(src.base.elecKWh, 1e10);
     d.base.gasKWh = numOrNull(src.base.gasKWh, 1e10);
   }
@@ -690,9 +691,10 @@ function taskCostUSD(prep, t) {
    Unités internes de cette partie : énergie en Wh, carbone en g CO2e, eau en mL.
    ================================================================== */
 
-/* Valeurs de départ, à remplacer par celles d’Énergies Demain : effectif de 25 à 30 personnes selon la période. */
+/* Valeurs de départ, à remplacer par celles d’Énergies Demain : effectif de 25 à 30 personnes selon la période ;
+   achats de services d’un peu moins de 10 k€ par salarié et par an, d’après Énergies Demain (novembre 2026). */
 function defaultBase() {
-  return { staff: 28, area: 400, homeShare: 0.3, elecKWh: null, gasKWh: null };
+  return { staff: 28, area: 400, homeShare: 0.3, svcKEur: 250, elecKWh: null, gasKWh: null };
 }
 
 var BASE_GROUPS = {
@@ -714,14 +716,16 @@ var BASE_PARAMS = [
     src: "ADEME, Base Empreinte : 51,9 g CO₂e/kWh pour l’électricité de la France continentale en 2024, analyse de cycle de vie comprise. Le contenu carbone de l’électricité varie au cours de l’année et tend à monter lors des pointes hivernales, d’où la borne haute à 80 g." },
   { id: "b_cif_g", group: "facteurs", label: "Émissions du gaz naturel", unit: "g CO2e/kWh", p5: 200, p50: 227, p95: 250, conf: 2, digits: 0,
     src: "ADEME, Base Empreinte : environ 227 g CO₂e par kWh (PCI) pour le gaz naturel distribué, amont compris, et environ 198 g pour la seule combustion." },
+  { id: "b_svc", group: "facteurs", label: "Émissions par euro d’achats de services (ratio monétaire)", unit: "kg CO2e/€", p5: 0.05, p50: 0.10, p95: 0.20, conf: 0, digits: 2,
+    src: "Les bilans carbone convertissent les achats de services (honoraires, sous-traitance, banque, assurance, télécoms, licences, impression) en émissions par des ratios monétaires de la Base Empreinte de l’ADEME, qui attribuent à chaque euro dépensé l’intensité moyenne de la branche. Pour les services de gestion et de conseil, ces ratios sont de l’ordre de 0,08 à 0,12 kg CO₂e par euro (valeurs indicatives citées par une source secondaire). L’intervalle, de 0,05 à 0,20, est un choix de l’outil qui couvre la diversité des services achetés ; il est à remplacer par un bilan carbone lorsqu’il existe. À titre de comparaison, les 91 à 95 t CO₂e d’achats de services de l’I4CE correspondent, avec ces ratios, à environ 20 à 28 k€ d’achats par personne, contre un peu moins de 10 k€ à Énergies Demain." },
   { id: "b_wue", group: "facteurs", label: "Eau consommée pour produire un kWh d’électricité en France", unit: "L/kWh", p5: 0.5, p50: 1.0, p95: 2.5, conf: 1, digits: 1,
     src: "Le SDES estime à 0,5 milliard de m³ par an l’eau consommée (évaporée) par le refroidissement des centrales, soit 12 % de la consommation d’eau douce, après une première estimation de 1,7 milliard. Rapportée aux 539 TWh produits en 2024 (RTE), cette valeur donne environ 0,9 L/kWh, et environ 3 L/kWh avec l’ancienne estimation. L’évaporation des retenues hydrauliques n’est pas comptée." },
   { id: "b_mob", group: "postes", label: "Déplacements professionnels et trajets domicile-travail", unit: "kg CO2e/pers./an", p5: 25, p50: 80, p95: 300, conf: 0, digits: 0,
     src: "Énergies Demain n’utilise quasiment aucun véhicule motorisé individuel : les trajets se font à vélo, à pied et en transports en commun, et les déplacements professionnels surtout en train. À titre de comparaison, l’I4CE (41 équivalents temps plein) attribue 13 % de ses 141 t CO₂e de 2024 aux déplacements professionnels, soit 0,44 t par personne. La valeur centrale est un choix de l’outil, et la borne haute admet quelques trajets plus émetteurs." },
-  { id: "b_purch", group: "postes", label: "Achats de services, de matériel et de fournitures, repas", unit: "kg CO2e/pers./an", p5: 1000, p50: 2400, p95: 3800, conf: 0, digits: 0,
-    src: "Le bilan 2024 de l’I4CE, institut de recherche sur l’économie du climat de 41 équivalents temps plein, attribue 91 à 95 t CO₂e à l’achat de services et 11 t à l’alimentation, soit environ 2,5 t par personne. L’I4CE précise que ces postes reposent sur des ratios monétaires de l’ADEME, source d’incertitude importante ; les achats d’Énergies Demain peuvent différer sensiblement." },
+  { id: "b_meal", group: "postes", label: "Repas des salariés", unit: "kg CO2e/pers./an", p5: 100, p50: 270, p95: 500, conf: 0, digits: 0,
+    src: "Le bilan 2024 de l’I4CE, institut de recherche de 41 équivalents temps plein, attribue 11 t CO₂e aux repas des salariés, soit environ 270 kg par personne et par an. L’ADEME (Impact CO2) donne de l’ordre de 0,5 kg CO₂e pour un repas végétarien et de 7 kg pour un repas à base de bœuf, de sorte que la valeur dépend beaucoup des menus ; l’intervalle est un choix de l’outil." },
   { id: "b_dig", group: "postes", label: "Numérique hors IA (matériel, réseaux, services en ligne)", unit: "kg CO2e/pers./an", p5: 50, p50: 130, p95: 350, conf: 0, digits: 0,
-    src: "Le bilan 2024 de l’I4CE attribue 5 t CO₂e au numérique (3 % du total), soit environ 0,12 t par personne. Dans cet outil, ce poste ne comprend pas l’usage de l’IA, qui est compté séparément." },
+    src: "Le bilan 2024 de l’I4CE attribue 5 t CO₂e au numérique (3 % du total), soit environ 0,12 t par personne ; sa page de synthèse ne détaille toutefois pas ce poste, et la valeur n’a pas pu être revérifiée. Dans cet outil, ce poste ne comprend pas l’usage de l’IA, qui est compté séparément. Les télécoms et les licences de logiciels figurent souvent dans les achats de services : s’ils y sont comptés, ce poste les compte une seconde fois, ce qui pèse peu sur la part de l’IA." },
   { id: "b_bilan_u", group: "saisie", label: "Incertitude d’un bilan carbone saisi", unit: "×", p5: 0.8, p50: 1.0, p95: 1.25, conf: 1, digits: 2,
     src: "Choix de l’outil : à défaut d’incertitude publiée pour un bilan donné, le total saisi est supposé connu à −20 % et +25 % (P5 et P95), ce qui rejoint la réserve de l’I4CE sur les ratios monétaires. Ce paramètre ne joue que si un bilan est saisi." },
   { id: "b_meas_u", group: "saisie", label: "Incertitude d’une consommation saisie d’après les factures", unit: "×", p5: 0.95, p50: 1.0, p95: 1.05, conf: 2, digits: 2,
@@ -734,7 +738,7 @@ var BASE_ITEMS = {
   gasOff:  { label: "Gaz des locaux", slot: 2 },
   home:    { label: "Télétravail", slot: 3 },
   mob:     { label: "Déplacements", slot: 4 },
-  purch:   { label: "Achats, services et repas", slot: 5 },
+  purch:   { label: "Achats de services et repas", slot: 5 },
   dig:     { label: "Numérique hors IA", slot: 6 },
   bilan:   { label: "Bilan carbone saisi", slot: 7 }
 };
@@ -757,13 +761,15 @@ var BASE_SOURCES = [
   ["Connaissance des énergies (AFP), révision par le SDES de la consommation d’eau des centrales : 0,5 milliard de m³ au lieu de 1,7", "https://www.connaissancedesenergies.org/afp/la-consommation-deau-douce-des-centrales-nucleaires-divisee-par-trois-dans-une-nouvelle-estimation-de-lexecutif-230329", "article de presse"],
   ["RTE, Bilan électrique 2024 : principaux résultats (production de 539 TWh, consommation de 449 TWh)", "https://assets.rte-france.com/analyse-et-donnees/2025-09/BE2024%20-%20Principaux%20R%C3%A9sultats.pdf", ""],
   ["I4CE, bilan carbone 2024 (141 t CO₂e pour 41 équivalents temps plein)", "https://www.i4ce.org/wp-content/uploads/2026/01/Bilan-carbone-VF-2024.pdf", "le document donne deux valeurs pour les achats de services, 91 et 95 t"],
+  ["Hayot Expertise, calculer le scope 3 : ratios monétaires indicatifs de la Base Empreinte de l’ADEME", "https://hayot-expertise.fr/blog/calculer-scope-3-emissions-fournisseurs-achats", "source secondaire ; valeurs à vérifier dans la Base Empreinte"],
+  ["ADEME, Impact CO2 : empreinte carbone des repas", "https://impactco2.fr/", ""],
   ["APUR, consommation d’eau potable des bureaux parisiens (38 litres par salarié et par jour en 2017)", "https://www.apur.org/en/climate-environment/soil-water/drinking-water-facts-about-rate-use-buildings", ""]
 ];
 
 /* Clé de mise en cache : tout ce dont dépend l’estimation du reste de l’entreprise. */
 function baseKey(scn) {
   var b = scn.base || defaultBase();
-  return [b.staff, b.area, b.homeShare, b.elecKWh, b.gasKWh, scn.orgFootprint, scn.workdays].join("|");
+  return [b.staff, b.area, b.homeShare, b.svcKEur, b.elecKWh, b.gasKWh, scn.orgFootprint, scn.workdays].join("|");
 }
 
 /* Simulation de Monte-Carlo du reste de l’entreprise, tirages indépendants de ceux de l’IA. */
@@ -789,7 +795,7 @@ function runBase(scn, opts) {
     a.homeEnergy[k] = (eHome + gHome) * 1000;
     a.cElecOff[k] = eOff * P.b_cif_e; a.cGasOff[k] = gOff * P.b_cif_g;
     a.cHome[k] = eHome * P.b_cif_e + gHome * P.b_cif_g;
-    a.cMob[k] = B.staff * P.b_mob * 1000; a.cPurch[k] = B.staff * P.b_purch * 1000; a.cDig[k] = B.staff * P.b_dig * 1000;
+    a.cMob[k] = B.staff * P.b_mob * 1000; a.cPurch[k] = B.svcKEur * 1e6 * P.b_svc + B.staff * P.b_meal * 1000; a.cDig[k] = B.staff * P.b_dig * 1000;
     a.cBilan[k] = hasBilan ? scn.orgFootprint * 1e6 * P.b_bilan_u : 0;
     a.wOff[k] = eOff * P.b_wue * 1000; a.wHome[k] = eHome * P.b_wue * 1000;
   }

@@ -30,7 +30,7 @@ var NOTES = {
   gasOff: "Surface des locaux × énergie finale par m² × part de gaz, ou consommation saisie d’après les factures.",
   home: "Jours de télétravail × énergie supplémentaire consommée à domicile par jour, répartie entre électricité et gaz dans les mêmes proportions que dans les locaux.",
   mob: "Trajets domicile-travail et déplacements professionnels, estimés par personne (vélo, marche, transports en commun, train).",
-  purch: "Achats de services, de matériel et de fournitures, et repas, estimés par personne d’après le bilan 2024 de l’I4CE.",
+  purch: "Achats de services, convertis par un ratio monétaire à partir du montant annuel saisi, et repas des salariés, estimés par personne d’après le bilan 2024 de l’I4CE.",
   dig: "Matériel numérique, réseaux et services en ligne hors IA, estimés par personne d’après le bilan 2024 de l’I4CE.",
   bilan: "Total saisi dans le champ « Bilan carbone annuel », avec une incertitude de −20 % à +25 %."
 };
@@ -62,7 +62,7 @@ function readingParagraphs(rows, S, mcb) {
   if (!mcb.hasBilan) {
     var purch = find(co, "purch"), enKeys = ["elecOff", "gasOff", "home"], enFrac = 0, enMed = 0;
     enKeys.forEach(function (k) { var it = find(co, k); if (it) { enFrac += it.frac; enMed += it.stats.p50; } });
-    out.push("La part du carbone dépend surtout du poids des achats de services, de matériel et de repas, qui représentent environ " + pc(purch.frac) + " des émissions estimées de l’entreprise, alors que l’énergie des locaux et du télétravail n’en représente que " + pc(enFrac) +
+    out.push("La part du carbone dépend surtout du poids des achats de services et des repas, qui représentent environ " + pc(purch.frac) + " des émissions estimées de l’entreprise, alors que l’énergie des locaux et du télétravail n’en représente que " + pc(enFrac) +
       ". Comparées aux seules émissions de cette énergie (" + fv(1, enMed) + "), celles de l’IA (" + fv(1, co.ai.p50) + ") en représentent environ " + pc(enMed > 0 ? co.ai.p50 / enMed : 0) +
       ", et environ " + pc(purch.stats.p50 > 0 ? co.ai.p50 / purch.stats.p50 : 0) + " de celles des achats ; l’intervalle à 90 % des émissions de l’IA couvre un facteur " + fn(co.ai.p95 / co.ai.p5, 2) + ", de sorte que ces rapports ne sont que des ordres de grandeur.");
   } else {
@@ -225,19 +225,21 @@ P.comparaison = {
     this.staffIn = intIn(B.staff, "Effectif total de l’entreprise", 1, function (v) { A.S().base.staff = Math.max(1, Math.round(v)); A.touchUI(); });
     this.areaIn = intIn(B.area, "Surface totale des locaux en mètres carrés", 10, function (v) { A.S().base.area = Math.max(0, v); A.touchUI(); });
     this.homeIn = intIn(Math.round(B.homeShare * 100), "Part du temps de travail réalisée à domicile, en pourcentage", 5, function (v) { A.S().base.homeShare = clamp(v / 100, 0, 1); A.touchUI(); });
+    this.svcIn = intIn(B.svcKEur, "Achats annuels de services, en milliers d’euros", 10, function (v) { A.S().base.svcKEur = Math.max(0, v); A.touchUI(); });
     this.elecIn = intIn(B.elecKWh != null ? B.elecKWh : "", "Électricité annuelle des locaux d’après les factures, en kilowattheures", 1000, function (v) { A.S().base.elecKWh = v; A.touchUI(); });
     this.gasIn = intIn(B.gasKWh != null ? B.gasKWh : "", "Gaz annuel des locaux d’après les factures, en kilowattheures", 1000, function (v) { A.S().base.gasKWh = v; A.touchUI(); });
     this.bilanIn = intIn(S.orgFootprint != null ? S.orgFootprint : "", "Bilan carbone annuel de l’entreprise hors IA, en tonnes de CO2 équivalent", 5, function (v) { A.S().orgFootprint = v > 0 ? v : null; A.touchUI(); });
     [["elecIn", function (st) { st.base.elecKWh = null; }], ["gasIn", function (st) { st.base.gasKWh = null; }], ["bilanIn", function (st) { st.orgFootprint = null; }]].forEach(function (x) {
       self[x[0]].addEventListener("change", function () { if (self[x[0]].value === "") { x[1](A.S()); A.touchUI(); } });
     });
-    this.hStaff = h("span", { "class": "hint" }); this.hArea = h("span", { "class": "hint" }); this.hHome = h("span", { "class": "hint" });
+    this.hStaff = h("span", { "class": "hint" }); this.hArea = h("span", { "class": "hint" }); this.hHome = h("span", { "class": "hint" }); this.hSvc = h("span", { "class": "hint" });
     this.hElec = h("span", { "class": "hint" }); this.hGas = h("span", { "class": "hint" }); this.hBilan = h("span", { "class": "hint" });
     function fld(label, input, hint) { return h("label", { "class": "field" }, [h("span", { text: label }), input, hint]); }
     card.appendChild(h("div", { "class": "stack", style: "gap:12px" }, [
       fld("Effectif total (personnes)", this.staffIn, this.hStaff),
       fld("Surface des locaux (m²)", this.areaIn, this.hArea),
-      fld("Part du temps de travail à domicile (%)", this.homeIn, this.hHome)
+      fld("Part du temps de travail à domicile (%)", this.homeIn, this.hHome),
+      fld("Achats de services (k€ par an)", this.svcIn, this.hSvc)
     ]));
     card.appendChild(h("div", { "class": "stack", style: "gap:12px;border-top:1px solid var(--line);padding-top:12px" }, [
       h("span", { "class": "h3", text: "Valeurs réelles (facultatif)" }),
@@ -253,7 +255,7 @@ P.comparaison = {
 
   /* recopie l’état dans les champs, sauf celui que l’utilisateur est en train de modifier */
   syncInputs: function (force) {
-    var S = A.S(), B = S.base, pairs = [[this.staffIn, B.staff], [this.areaIn, B.area], [this.homeIn, Math.round(B.homeShare * 100)],
+    var S = A.S(), B = S.base, pairs = [[this.staffIn, B.staff], [this.areaIn, B.area], [this.homeIn, Math.round(B.homeShare * 100)], [this.svcIn, B.svcKEur],
       [this.elecIn, B.elecKWh != null ? B.elecKWh : ""], [this.gasIn, B.gasKWh != null ? B.gasKWh : ""], [this.bilanIn, S.orgFootprint != null ? S.orgFootprint : ""]];
     pairs.forEach(function (p) { if (force || p[0] !== document.activeElement) p[0].value = p[1]; });
   },
@@ -322,6 +324,9 @@ P.comparaison = {
     this.hArea.textContent = nb("Total des trois sites, soit " + fn(B.staff > 0 ? B.area / B.staff : 0, 2) + " m² par personne.");
     var hd = Math.round(mcb.homeDays);
     this.hHome.textContent = nb("Soit " + fn(hd, 3) + " jours de télétravail par an pour l’équipe, et " + fn(B.staff > 0 ? hd / B.staff : 0, 2) + " par personne.");
+    var pu = find(rows[2], "purch");
+    this.hSvc.textContent = nb("Soit " + fn(B.staff > 0 ? B.svcKEur / B.staff : 0, 2) + " k€ par personne : honoraires, sous-traitance, banque, assurance, télécoms, logiciels, hors déplacements, loyers et énergie. Convertis par un ratio monétaire (de 0,05 à 0,20 kg CO₂e par euro) et complétés par les repas, ils donnent " +
+      (pu ? fv(1, pu.stats.p50) + " (de " + M.fmtRange(1, pu.stats.p5, pu.stats.p95, 2) + ")." : "une estimation que remplace ici le bilan carbone saisi."));
     this.hElec.textContent = nb(B.elecKWh != null ? "Valeur saisie utilisée, avec une incertitude de ±5 %." : "Estimation actuelle : " + fv(0, elecOff.p50) + " (de " + M.fmtRange(0, elecOff.p5, elecOff.p95, 2) + ").");
     this.hGas.textContent = nb(B.gasKWh != null ? (B.gasKWh === 0 ? "Aucun gaz : l’estimation par postes est remplacée par zéro." : "Valeur saisie utilisée, avec une incertitude de ±5 %.") : "Estimation actuelle : " + fv(0, gasOff.p50) + " (de " + M.fmtRange(0, gasOff.p5, gasOff.p95, 2) + ").");
     var coBase = rows[2].base;
@@ -462,12 +467,13 @@ P.comparaison = {
       "                    × énergie supplémentaire par jour\n" +
       "   répartie entre électricité et gaz comme dans les locaux\n\n" +
       "Carbone (g) = électricité × facteur électricité + gaz × facteur gaz\n" +
-      "              + effectif × (déplacements + achats + numérique)\n" +
+      "              + achats de services (€) × ratio monétaire\n" +
+      "              + effectif × (déplacements + repas + numérique)\n" +
       "   ou le bilan carbone saisi, avec une incertitude de −20 % à +25 %\n\n" +
       "Eau (L) = électricité × eau évaporée pour produire un kWh en France\n\n" +
       "Part de l’IA = IA / (IA + reste de l’entreprise), calculée sur chacun\n" +
       "des 2 500 tirages puis résumée par ses quantiles" }));
-    box.appendChild(para("Les paramètres du reste de l’entreprise suivent la même loi que ceux de l’IA (log-normale asymétrique ajustée sur P5, médiane et P95) et sont tirés indépendamment de ceux de l’IA avec une graine fixe. Les incertitudes retenues pour les postes d’émissions sont larges, parce qu’elles reposent sur un seul bilan de référence (celui de l’I4CE, qui compte 41 équivalents temps plein) et sur des ratios monétaires.", "muted small"));
+    box.appendChild(para("Les paramètres du reste de l’entreprise suivent la même loi que ceux de l’IA (log-normale asymétrique ajustée sur P5, médiane et P95) et sont tirés indépendamment de ceux de l’IA avec une graine fixe. Les incertitudes retenues pour les postes d’émissions sont larges, parce que plusieurs d’entre eux reposent sur un seul bilan de référence (celui de l’I4CE, qui compte 41 équivalents temps plein) et que les achats de services sont convertis par un ratio monétaire, qui attribue à chaque euro l’intensité moyenne d’une branche.", "muted small"));
     var tb = h("table", { "class": "tbl" });
     tb.appendChild(h("thead", null, h("tr", null, ["Paramètre", "Unité", "P5", "Médiane", "P95", "Confiance"].map(function (c, i) { return h("th", { scope: "col", "class": i >= 2 && i <= 4 ? "r" : "", text: c }); }))));
     var body = h("tbody"), last = null;

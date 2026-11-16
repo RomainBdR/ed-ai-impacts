@@ -100,7 +100,7 @@ check("la comparaison porte sur quatre indicateurs, avec des parts comprises ent
 check("part de l’IA du scénario par défaut (document du projet)", () => {
   const p = Object.fromEntries(rows.map((r) => [r.id, r.share.p50]));
   near(p.elec, 0.032, 0.15, "électricité"); near(p.energy, 0.025, 0.15, "énergie finale");
-  near(p.co2, 0.0080, 0.15, "carbone"); near(p.water, 0.12, 0.15, "eau");
+  near(p.co2, 0.012, 0.15, "carbone"); near(p.water, 0.12, 0.15, "eau");
 });
 
 check("la part de l’IA croît avec le multiplicateur d’usage et le multiplicateur inverse est cohérent", () => {
@@ -120,6 +120,15 @@ check("des factures saisies remplacent les estimations et resserrent l’interva
   const r2 = M.compare(mc, mcb2).find((r) => r.id === "elec"), r1 = rows.find((r) => r.id === "elec");
   assert.ok(r2.base.p50 > 30e3 * 1000 * 0.95 && r2.base.p50 < 40e3 * 1000, "électricité du reste : " + r2.base.p50);
   assert.ok(r2.base.p95 / r2.base.p5 < r1.base.p95 / r1.base.p5, "l’intervalle doit se resserrer");
+});
+
+check("les achats de services saisis (k€) pilotent le poste achats, et les repas restent comptés par personne", () => {
+  const item = (svc) => { const S2 = M.defaultState(); S2.base.svcKEur = svc;
+    return M.compare(mc, M.runBase(S2, { N: 2500 })).find((r) => r.id === "co2").items.find((x) => x.key === "purch").stats.p50; };
+  const a = item(0), b = item(250), c = item(500);
+  assert.ok(a > 0 && a < b && b < c, "poste achats : " + [a, b, c].join(" / "));
+  near(a, 28 * 270e3, 0.15, "repas seuls (g)");
+  near((c - a) / (b - a), 2, 0.1, "proportionnalité au montant des achats");
 });
 
 check("un bilan carbone saisi remplace l’estimation des postes d’émission", () => {

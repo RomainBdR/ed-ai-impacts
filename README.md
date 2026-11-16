@@ -29,7 +29,7 @@ Les quatre indicateurs sont l’électricité (Wh), les émissions de carbone (g
 
 Les résultats sont des ordres de grandeur. Ils ne remplacent ni une mesure ni un bilan environnemental, et ils dépendent des hypothèses du scénario, que chaque personne peut modifier.
 
-Dans l’onglet Comparaison, le reste d’Énergies Demain repose sur des valeurs par défaut génériques (28 personnes, 400 m² de locaux, 30 % du temps de travail à domicile) et sur des repères publiés, avec leurs propres incertitudes. Il convient de les remplacer par les factures d’électricité et de gaz et par le bilan carbone de l’entreprise dès que ces données sont disponibles, car la part de l’IA est très sensible à ce périmètre.
+Dans l’onglet Comparaison, le reste d’Énergies Demain repose sur des valeurs par défaut (28 personnes, 400 m² de locaux, 30 % du temps de travail à domicile, 250 k€ d’achats de services par an, soit un peu moins de 10 k€ par salarié) et sur des repères publiés, avec leurs propres incertitudes. Les achats de services sont convertis en émissions par un ratio monétaire, de 0,05 à 0,20 kg CO₂e par euro, qui reste le principal facteur d’incertitude sur la part du carbone. Il convient de les remplacer par les factures d’électricité et de gaz et par le bilan carbone de l’entreprise dès que ces données sont disponibles, car la part de l’IA est très sensible à ce périmètre.
 
 La part de l’eau tend à être surestimée : l’outil compte, pour l’IA, l’eau évaporée sur le site de calcul, pour produire l’électricité et pour fabriquer le matériel, alors que l’eau du reste de l’entreprise se limite à celle qui sert à produire son électricité. La matière n’est pas comparée, faute d’estimation pour le reste de l’entreprise.
 
